@@ -1,6 +1,14 @@
-get_offender_records <- function(mdoc_numbers) {
+pacman::p_load(
+  "tidyverse",
+  "rvest",
+  "httr"
+)
+
+get_offender_records <- function(mdoc_numbers, file_stem, batch_size = 1E4) {
   
   cat("\n")
+  
+  counter <- 0
   
   moja <- function(mdoc_number) {
     
@@ -16,17 +24,18 @@ get_offender_records <- function(mdoc_numbers) {
     found <- record_is_found(offender_page)
     
     if(!found) {
-      cat("o")
       return(NULL)
     }
     
-    cat("x")
+    counter <<- counter + 1
+    
+    cat_progress_bar(counter)
     
     res <- list()
     
-    res$demos <- offender_page %>% parse_offender_demos()
-    res$status <- offender_page %>% parse_offender_status()
-    res$sentences <- offender_page %>% parse_offender_sentences()
+    res$demos      <- offender_page %>% parse_offender_demos()
+    res$status     <- offender_page %>% parse_offender_status()
+    res$sentences  <- offender_page %>% parse_offender_sentences()
     res$conditions <- offender_page %>% parse_supervision_conditions()
     
     res
@@ -38,6 +47,19 @@ get_offender_records <- function(mdoc_numbers) {
   for(i in seq_along(mdoc_numbers)) {
     
     res[[i]] <- moja(mdoc_numbers[i])
+    if(i == batch_size | i == length(mdoc_numbers)) {
+      res <- compact(res)
+      cat("\r", length(res))
+      file_path <- file_stem %>% str_c("-to-", mdoc_numbers[i], ".rds")
+      write_rds(res, file_path)
+      res <- NULL
+      remaining_mdoc_numbers <- mdoc_numbers[-1:-i]
+      if(i == length(mdoc_numbers)) {
+        cat("\nall done")
+        return(NULL)
+      }
+      get_offender_records(remaining_mdoc_numbers, file_stem = file_stem, batch_size = batch_size)
+    }
     
   }
   
@@ -46,6 +68,7 @@ get_offender_records <- function(mdoc_numbers) {
   res
   
 }
+
 
 
 # get offender demos from top of page
@@ -85,7 +108,18 @@ parse_offender_sentences <- function(offender_page) {
 
 parse_supervision_conditions <- function(offender_page) {
   
-  res <- offender_page %>% html_nodes(xpath = "div[@id='valSupervisionConditions']")
+  res <- offender_page %>% 
+    html_node(xpath = "//span[@id='valSupervisionConditions']") %>% 
+    html_text()
+  
+  res <- res %>% textConnection() %>% readLines()
+  
+  res <- res[res != ""] %>% 
+    str_split_fixed(" - ", 2)
+  
+  colnames(res) <- c("supervision_condition_code", "supervision_condition_description")
+  
+  res <- as_tibble(res)
   
   res
   
@@ -174,3 +208,50 @@ test_fail_nums <- c(
   2, 
   3
 )
+
+test_dots <- function() {
+  
+  cat("....")
+  
+}
+
+test_progress_bar <- function() {
+  
+  cat_progress_string(1)
+  
+  Sys.sleep(2)
+  
+  cat_progress_string(12)
+  
+  Sys.sleep(2)
+  
+  cat_progress_string(100)
+  
+  Sys.sleep(2)
+  
+  cat_progress_string(300)
+  
+}
+
+
+cat_progress_bar <- function(counter, chunk_size = 10) {
+  
+  n_bars <- counter %/% chunk_size
+  n_dots <- counter %% chunk_size
+  
+  res <- str_c(
+    "\r", 
+    strrep("|", n_bars), 
+    strrep(".", n_dots), 
+    strrep(" ", chunk_size - 1), 
+    collapse = ""
+  )
+  
+  cat(res)
+  
+}
+
+
+
+
+

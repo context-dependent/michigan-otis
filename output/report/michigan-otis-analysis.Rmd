@@ -1,0 +1,70 @@
+---
+title: "michigan-otis-analysis"
+author: "Thomas McManus"
+date: "6/3/2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_knit$set(
+  root.dir = here::here()
+)
+```
+
+## About the dataset
+
+The dataset used in this analysis comprises records scraped from Michigan's public-facing offender tracking system. The database includes *full* offender histories for people with misdemeanor or felony convictions who have active prison or parole sentences, or who have been discharged from a prison or parole sentence within the last three years. Along with the offender's history of involvement with the Michigan correctional system, it includes a limited set of personal characteristics and a summary of their current status. 
+
+### Covariates
+
+The database contains limited information about each offender's demographic characteristics, mostly focused on the datapoints another person would use to identify them. These are as follows: 
+
+- Racial identification
+- Gender
+- Hair Colour
+- Eye Colour
+- Height
+- Weight
+- Date of birth
+- Marks, Scars, and Tattoos
+- Known aliases
+
+Without a fully extracted and cleaned dataset to examine, I expect the most interesting covariates to be race, gender, age, and bmi, though I'll do some work to explore the effects of tattoos, especially facial tattoos, on sentencing and release. 
+
+### Status
+
+These variables describe the offender's current status: whether they are probationers, parolees, absconders, or prisoners. If they are prisoners, their assigned correctional facility and its security level are specified. For those with active sentences, their earliest and latest possible release dates are also specified. For those on probation or parole, their supervision beginning and scheduled discharge dates are included. If the offender absconded from their parole or probation sentence, the date at which they absconded is present. 
+
+### Sentences
+
+Each offender's associated sentences are divided by two factors: whether they are prison or probation sentences, and whether they are active or inactive. All sentences include the following: 
+
+- A description of the charge, along with an "MCL code", which corresponds to the specific Michigan regulation under which they've been charged and convicted. 
+- The county in which the conviction was secured, along with the dates of offense and sentencing. 
+- Each conviction has a type, like "plea" or "no contest"
+
+Inactive sentences also include the date of discharge and the reason for that discharge. Unfortunately, active sentences don't appear to include an actual sentence value. Rather, they only include the "minimum sentence". 
+
+### Supervision conditions
+
+If an offender has an active probation or parole sentence from which they have not absconded, the conditions of their supervision are listed in this section of the page. There are lots of these, but they include obvious things like substance abuse treatment, drug testing, job search requirements, education requirements, and restrictions on movement and association. 
+
+## Analysis Questions
+
+1. What factors predict a longer sentence? 
+  - race? 
+  - gender? 
+  - obesity?  
+  - controls: mcl code (break this down)
+2. Are some people more likely to plead guilty or no contest than others? 
+3. After the offender's first conviction, what factors are associated with recidivism? 
+4. Do some types of crime predict recidivism, or other specific types of recidivism? 
+
+## Analysis approach
+
+- Offenders are removed from the database 3 years after their release, so we should expect the distribution of sentences to skew longer the more the start of their sentences precede that cutoff. If we want to examine a representative sample of offenders, we should filter for those whose sentences started at most 3 years ago. 
+- When comparing offenders with a most recent sentence length of t or more years, we can include sentences which started at most 3 + t years ago
+- Can we replicate official documents from recent years produced by MDOC?
+- The OTIS website indicates that some offender records are not included as a part of the language in thier convictions. The sample referred to above will only be representative so long as the imposition of confidentiality over offender records is independent. We can imagine that this is likely not to be the case, but we should take some pains to assess it quantitatively. 
+- Are the "minimum sentences" associated with each prison sentence minimums for the crime committed, or for the offender? I really don't know, but I'll do some work to find out. 

@@ -9,5 +9,9 @@
 
 possible_mdoc_numbers <- 1E5:1E6
 
+# This appears to be working, but has taken > 24 hours
+# Definitely not going to be a live-feed lol 
+
 test_pull <- possible_mdoc_numbers %>% get_offender_records()
 
+test_pull %>% write_rds("data/raw/full-offender-list.rds")
