@@ -15,3 +15,13 @@ possible_mdoc_numbers <- 1E5:1E6
 test_pull <- possible_mdoc_numbers %>% get_offender_records()
 
 test_pull %>% write_rds("data/raw/full-offender-list.rds")
+
+
+# Round 2: scrape broke down around 241999. I'm going to restart from there
+
+remaining_mdoc_numbers <- 9.77E5:1E6
+
+remaining_mdoc_numbers %>% 
+  get_offender_records(batch_size = 1000,file_stem = "data/raw/raw-records")
+
+

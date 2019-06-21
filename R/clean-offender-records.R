@@ -14,6 +14,7 @@ clean_offender_records <- function(raw_offender_records) {
     map(parse_mdoc_dates)
   
   res$demos <- clean_demos(res$demos)
+  res$marks_scars_tattoos <- clean_mst(res$status)
   
   res
   
@@ -31,12 +32,13 @@ table_offender_records <- function(raw_offender_records) {
   
 }
 
-identify_all_tables <- function(offender_recordset) {
+identify_all_tables <- function(raw_offender_records) {
   
-  offender_recordset %>% 
+  raw_offender_records %>% 
+    
     map(
       ~ .x %>% 
-        mutate(offender_number = offender_recordset$demos$offender_number) %>% 
+        mutate(offender_number = raw_offender_records$demos$offender_number) %>% 
         select(offender_number, everything()) %>% 
         rename(offender_id = offender_number) 
     )
@@ -105,6 +107,14 @@ parse_offender_weight <- function(weight_in_pounds) {
   
 }
 
+
+# This is kindof gross, but I expect that the judiciary punishes more 
+# harshly those who seem undeserving of mercy. 
+
+# In modern society, poor fat people are some of the most maligned
+# and ridiculed. Fatness is read by some as a signal of weak will,
+# and I think it could be connected to how deserving offenders
+
 categorize_bmi <- function(bmi) {
   
   res <- cut(
@@ -125,4 +135,61 @@ categorize_bmi <- function(bmi) {
 }
 
 
+
+# CLEAN MARKS, SCARS, TATTOOS ---------------------------------------------
+
+clean_mst <- function(status_table) {
+  
+  res <- status_table %>% 
+    select(offender_id, mst) %>% 
+    mutate(mst = trimws(mst)) %>% 
+    separate_rows(mst, sep = "[\\r\\n]+") %>% 
+    filter(mst != "None") %>% 
+    separate(mst, into = c("type", "placement", "description"), sep = "\\s*-\\s*")
+  
+  
+  res
+  
+}
+
+
+
+# CLEAN ALIASES -----------------------------------------------------------
+
+clean_aliases <- function(status_table) {
+  
+  res <- status_table %>% 
+    select(offender_id, alias) %>% 
+    mutate(
+      alias = trimws(alias)
+    ) %>% 
+    separate_rows(alias, sep = "[\\r\\n]+") %>% 
+    mutate(alias = str_to_title(alias) %>% str_replace_all("\\s+", " ")) %>% 
+    filter(alias != "None")
+  
+  res
+  
+}
+
+
+# CLEAN CURRENT STATUS ----------------------------------------------------
+
+
+
+# CLEAN SENTENCES ---------------------------------------------------------
+
+clean_sentences <- function(sentences_table) {
+  
+  
+  res <- sentences_table %>% 
+    mutate(
+      sentence_id      = str_c("S-", 10E4 + 1:n()),
+      sentence_custody = ifelse(str_detect(sentence_type, "^R"), "Probation", "Prison"), 
+      sentence_status  = ifelse(str_detect(sentence_type, "A$"), "Active", "Inactive"),
+      # mcl_act          = str_extract(mcl, "^\\d+") <= Some sentences have multiple mcl codes associated, they should be normalized, right? 
+    )
+  
+  res
+  
+}
 

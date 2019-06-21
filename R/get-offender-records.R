@@ -10,6 +10,10 @@ get_offender_records <- function(mdoc_numbers, file_stem, batch_size = 1E4) {
   
   counter <- 0
   
+  request_timer <- timer()
+  
+  request_timer$start()
+  
   moja <- function(mdoc_number) {
     
     req <- httr::GET(
@@ -49,6 +53,9 @@ get_offender_records <- function(mdoc_numbers, file_stem, batch_size = 1E4) {
     res[[i]] <- moja(mdoc_numbers[i])
     if(i == batch_size | i == length(mdoc_numbers)) {
       res <- compact(res)
+      
+      lap <- request_timer$lap()
+      cat(" ", round(lap))
       cat("\r", length(res))
       file_path <- file_stem %>% str_c("-to-", mdoc_numbers[i], ".rds")
       write_rds(res, file_path)
@@ -196,44 +203,6 @@ record_is_found <- function(offender_page) {
 }
 
 
-test_offender_nums <- c(
-  486641, 
-  238407,
-  952809
-)
-
-
-test_fail_nums <- c(
-  1, 
-  2, 
-  3
-)
-
-test_dots <- function() {
-  
-  cat("....")
-  
-}
-
-test_progress_bar <- function() {
-  
-  cat_progress_string(1)
-  
-  Sys.sleep(2)
-  
-  cat_progress_string(12)
-  
-  Sys.sleep(2)
-  
-  cat_progress_string(100)
-  
-  Sys.sleep(2)
-  
-  cat_progress_string(300)
-  
-}
-
-
 cat_progress_bar <- function(counter, chunk_size = 10) {
   
   n_bars <- counter %/% chunk_size
@@ -251,7 +220,41 @@ cat_progress_bar <- function(counter, chunk_size = 10) {
   
 }
 
-
+timer <- function() {
+  
+  start_time_global <- NULL
+  start_time_lap <- NULL
+  laps <- c()
+    
+  res <- list(
+    start = function() {
+      if(is.null(start_time_global)) start_time_global <<- Sys.time()
+    }, 
+    lap = function() {
+      time_now <- Sys.time()
+      if(is.null(start_time_lap)) start_time_lap <<- start_time_global
+      lap_time <- time_now - start_time_global
+      
+      laps <<- c(laps, lap_time)
+      
+      lap_time
+    }, 
+    total = function() {
+      time_now <- Sys.time()
+      total_time_elapsed <- time_now - start_time_global
+      total_time_elapsed
+    },
+    reset = function() {
+      start_time_global <<- NULL
+      start_time_laps <<- NULL
+      laps <<- c()
+    },
+    get_laps = function() {
+      laps
+    }
+  )
+  
+}
 
 
 
