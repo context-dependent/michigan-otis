@@ -113,7 +113,8 @@ parse_offender_weight <- function(weight_in_pounds) {
 
 # In modern society, poor fat people are some of the most maligned
 # and ridiculed. Fatness is read by some as a signal of weak will,
-# and I think it could be connected to how deserving offenders
+# and I think it could be connected to how deserving offenders are 
+# perceived to be of leniency. 
 
 categorize_bmi <- function(bmi) {
   
@@ -186,8 +187,43 @@ clean_sentences <- function(sentences_table) {
       sentence_id      = str_c("S-", 10E4 + 1:n()),
       sentence_custody = ifelse(str_detect(sentence_type, "^R"), "Probation", "Prison"), 
       sentence_status  = ifelse(str_detect(sentence_type, "A$"), "Active", "Inactive"),
-      # mcl_act          = str_extract(mcl, "^\\d+") <= Some sentences have multiple mcl codes associated, they should be normalized, right? 
+      mcl_codes        = str_extract_all(mcl, "(?<=(\\s|^))[\\d\\.a-zA-Z]+"),
+      minimum_sentence = parse_sentence_length(minimum_sentence), 
+      maximum_sentence = parse_sentence_length(maximum_sentence)
     )
+  
+  res <- res %>% 
+    select(
+      sentence_id, 
+      offender_id, 
+      offense, 
+      date_of_offense, 
+      county,
+      mcl_codes, 
+      minimum_sentence, 
+      maximum_sentence,
+      date_of_sentence, 
+      date_of_discharge = discharge_date,
+      discharge_reason, 
+      conviction_type, 
+      sentence_custody, 
+      sentence_status
+    )
+  
+  res
+  
+}
+
+
+parse_sentence_length <- function(sentence_length) {
+  
+  res <- case_when(
+    !str_detect(sentence_length, "year|month|day") ~ "0 years", 
+    sentence_length == "LIFE" ~ "100 years",
+    TRUE ~ sentence_length
+  )
+  
+  res <- lubridate::as.period(res)
   
   res
   
